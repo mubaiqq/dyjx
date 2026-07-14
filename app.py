@@ -110,6 +110,11 @@ def task_parse_share(url):
 def task_parse_gallery(url):
     """从图文分享页的 _ROUTER_DATA 提取无水印图片。"""
     try:
+        source_url = url
+        # slides 分享页只负责跳转，完整图集数据位于同作品 ID 的 note 分享页。
+        slide_id = re.search(r'/share/slides/(\d+)', url)
+        if slide_id:
+            url = f'https://www.iesdouyin.com/share/note/{slide_id.group(1)}/'
         resp = requests.get(url, headers=HEADERS_MOBILE, allow_redirects=True, timeout=12)
         match = re.search(r'window\._ROUTER_DATA\s*=\s*(\{.*?\})\s*</script>', resp.text, re.S)
         if not match:
@@ -150,7 +155,7 @@ def task_parse_gallery(url):
             'imageCount': len(images),
             'url': '',
             'cover': images[0]['url'],
-            'sourceUrl': resp.url,
+            'sourceUrl': source_url,
             'cached': False,
         }
     except Exception:
@@ -220,7 +225,7 @@ def api_parse():
     vid_from_page, api_urls, title, author = f_share.result()
 
     # 图文作品没有视频播放地址，改为读取分享页内的图片列表。
-    if '/share/note/' in real_url or '/note/' in real_url:
+    if re.search(r'/(?:share/)?(?:note|slides)/', real_url):
         gallery = task_parse_gallery(real_url)
         if gallery:
             return jsonify(gallery)
