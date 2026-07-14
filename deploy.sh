@@ -17,6 +17,10 @@ UNIT_EXISTED=0
 WAS_ENABLED=0
 WAS_ACTIVE=0
 INSTALL_EXISTED=0
+LEGACY_SERVICE=""
+LEGACY_WAS_ENABLED=0
+LEGACY_WAS_ACTIVE=0
+LEGACY_WAS_STOPPED=0
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "[错误] 此脚本需要 root 权限，请使用 sudo 运行。" >&2
@@ -109,15 +113,47 @@ rollback() {
     else
         systemctl stop "$SERVICE_NAME.service" >/dev/null 2>&1 || true
     fi
+    if [ -n "$LEGACY_SERVICE" ] && [ "$LEGACY_WAS_STOPPED" -eq 1 ]; then
+        if [ "$LEGACY_WAS_ENABLED" -eq 1 ]; then systemctl enable "$LEGACY_SERVICE" >/dev/null 2>&1 || true
+        else systemctl disable "$LEGACY_SERVICE" >/dev/null 2>&1 || true; fi
+        if [ "$LEGACY_WAS_ACTIVE" -eq 1 ]; then systemctl restart "$LEGACY_SERVICE" >/dev/null 2>&1 || true
+        else systemctl stop "$LEGACY_SERVICE" >/dev/null 2>&1 || true; fi
+    fi
     exit "$exit_code"
 }
 trap rollback ERR
 
+listener_pids() {
+    ss -ltnp "sport = :$PORT" 2>/dev/null | sed -n 's/.*pid=\([0-9][0-9]*\).*/\1/p' | sort -u
+}
+
+pid_belongs_to_unit() {
+    local pid="$1" unit="$2" cgroup
+    cgroup="$(systemctl show -p ControlGroup --value "$unit" 2>/dev/null || true)"
+    [ -n "$cgroup" ] && grep -Fq -- "$cgroup" "/proc/$pid/cgroup" 2>/dev/null
+}
+
 CURRENT_PID="$(systemctl show -p MainPID --value "$SERVICE_NAME.service" 2>/dev/null || true)"
-LISTENER="$(ss -ltnp "sport = :$PORT" 2>/dev/null | sed -n '2p' || true)"
-if [ -n "$LISTENER" ]; then
-    if [ -z "$CURRENT_PID" ] || [ "$CURRENT_PID" = 0 ] || [[ "$LISTENER" != *"pid=$CURRENT_PID,"* ]]; then
-        fail "端口 $PORT 已被其他进程占用：$LISTENER"
+mapfile -t LISTENER_PIDS < <(listener_pids)
+if [ "${#LISTENER_PIDS[@]}" -gt 0 ]; then
+    CURRENT_OWNS_ALL=1
+    for pid in "${LISTENER_PIDS[@]}"; do
+        pid_belongs_to_unit "$pid" "$SERVICE_NAME.service" || CURRENT_OWNS_ALL=0
+    done
+    if [ "$CURRENT_OWNS_ALL" -ne 1 ]; then
+        for candidate in video-parser.service video-parser-restored.service; do
+            candidate_owns_all=1
+            for pid in "${LISTENER_PIDS[@]}"; do
+                pid_belongs_to_unit "$pid" "$candidate" || candidate_owns_all=0
+            done
+            if [ "$candidate_owns_all" -eq 1 ]; then LEGACY_SERVICE="$candidate"; break; fi
+        done
+        if [ -z "$LEGACY_SERVICE" ]; then
+            fail "端口 $PORT 已被其他进程占用，无法确认是旧版解析服务"
+        fi
+        if systemctl is-enabled --quiet "$LEGACY_SERVICE" 2>/dev/null; then LEGACY_WAS_ENABLED=1; fi
+        if systemctl is-active --quiet "$LEGACY_SERVICE" 2>/dev/null; then LEGACY_WAS_ACTIVE=1; fi
+        log "检测到旧版解析服务 $LEGACY_SERVICE 占用端口 $PORT，将自动接管并更新"
     fi
 fi
 
@@ -140,6 +176,17 @@ log "以 $RUN_USER 用户创建虚拟环境并安装依赖"
 runuser -u "$RUN_USER" -- python3 -m venv "$WORK_DIR/source/venv"
 runuser -u "$RUN_USER" -- "$WORK_DIR/source/venv/bin/pip" install --disable-pip-version-check --no-cache-dir -r "$WORK_DIR/source/requirements.txt"
 runuser -u "$RUN_USER" -- "$WORK_DIR/source/venv/bin/python" -m py_compile "$WORK_DIR/source/app.py"
+
+if [ -n "$LEGACY_SERVICE" ]; then
+    mapfile -t CURRENT_LISTENER_PIDS < <(listener_pids)
+    [ "${#CURRENT_LISTENER_PIDS[@]}" -gt 0 ] || fail "接管前端口 $PORT 的监听状态已变化"
+    for pid in "${CURRENT_LISTENER_PIDS[@]}"; do
+        pid_belongs_to_unit "$pid" "$LEGACY_SERVICE" || fail "接管前端口 $PORT 的进程归属已变化"
+    done
+    log "停止旧版服务 $LEGACY_SERVICE"
+    systemctl stop "$LEGACY_SERVICE"
+    LEGACY_WAS_STOPPED=1
+fi
 
 if [ "$INSTALL_EXISTED" -eq 1 ]; then
     BACKUP_DIR="$(mktemp -d "${INSTALL_DIR}.rollback.XXXXXX")"
@@ -199,6 +246,12 @@ if [ "$HEALTH_OK" -ne 1 ]; then
     journalctl -u "$SERVICE_NAME.service" -n 30 --no-pager || true
     printf '\033[1;31m[错误]\033[0m 健康检查失败：%s\n' "$HEALTH_URL" >&2
     false
+fi
+
+if [ -n "$LEGACY_SERVICE" ]; then
+    systemctl disable "$LEGACY_SERVICE" >/dev/null
+    systemctl is-active --quiet "$LEGACY_SERVICE" && fail "旧版服务仍在运行：$LEGACY_SERVICE"
+    systemctl is-enabled --quiet "$LEGACY_SERVICE" 2>/dev/null && fail "旧版服务仍为开机自启：$LEGACY_SERVICE"
 fi
 
 trap - ERR
