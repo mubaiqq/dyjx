@@ -18,13 +18,53 @@
 - 解析器：<https://video-bak.mubaiyun.xyz>
 - API 文档：<https://video-bak.mubaiyun.xyz/api-docs>
 
-## 快速启动
+## 一键安装 / 更新
+
+适用于 Ubuntu / Debian。脚本会自动安装必要依赖、拉取最新源码、创建 Python 虚拟环境、注册 systemd 服务、启用开机自启，并在启动后执行健康检查。以下命令固定到 `v1.0.0` 版本；你也可以先下载并审阅 `deploy.sh` 后再执行。
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mubaiqq/dyjx/v1.0.0/deploy.sh | sudo bash
+```
+
+> 同一条命令可重复执行。首次运行会安装到 `/opt/dyjx`；再次运行会自动拉取 GitHub 最新版本并覆盖更新。更新失败或健康检查不通过时，会自动恢复旧版本。项目不保存业务数据，因此更新无需迁移数据。
+
+默认配置：
+
+| 项目 | 默认值 |
+|---|---|
+| 安装目录 | `/opt/dyjx` |
+| systemd 服务 | `dyjx.service` |
+| 监听地址 | `127.0.0.1:5800` |
+| 开机自启 | 自动启用 |
+
+常用命令：
+
+```bash
+sudo systemctl status dyjx
+sudo systemctl restart dyjx
+sudo journalctl -u dyjx -f
+```
+
+### 自定义安装参数
+
+可通过环境变量覆盖默认配置：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mubaiqq/dyjx/v1.0.0/deploy.sh \
+  | sudo INSTALL_DIR=/opt/dyjx PORT=5800 SERVICE_NAME=dyjx RUN_USER=www-data bash
+```
+
+支持的变量：`INSTALL_DIR`、`PORT`、`SERVICE_NAME`、`RUN_USER`、`RUN_GROUP`、`BRANCH`、`REPO_URL`。
+
+脚本只部署后端并监听本机端口，不会自动修改 Nginx、域名或 SSL 配置。你可以自行将域名反向代理到 `http://127.0.0.1:5800`。
+
+## 手动启动
 
 需要 Python 3.10 或更高版本。
 
 ```bash
-git clone https://github.com/mubaiqq/douyin-media-parser.git
-cd douyin-media-parser
+git clone https://github.com/mubaiqq/dyjx.git
+cd dyjx
 chmod +x start.sh
 ./start.sh
 ```
@@ -32,7 +72,7 @@ chmod +x start.sh
 默认监听：
 
 ```text
-127.0.0.1:5802
+127.0.0.1:5800
 ```
 
 也可以手动启动：
@@ -54,7 +94,7 @@ GET /api/parse?url={抖音链接}
 ```bash
 curl --get \
   --data-urlencode "url=https://v.douyin.com/xxxx/" \
-  "http://127.0.0.1:5802/api/parse"
+  "http://127.0.0.1:5800/api/parse"
 ```
 
 ### 视频响应
@@ -106,6 +146,7 @@ curl --get \
 ```text
 .
 ├── app.py               # Flask 后端与解析逻辑
+├── deploy.sh            # 首次安装/后续更新脚本
 ├── public/
 │   ├── index.html       # 在线解析页面
 │   └── api.html         # API 文档页面

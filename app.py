@@ -1,12 +1,17 @@
 import re
 import json
+import os
 import time
 import threading
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, request, jsonify, send_from_directory, Response
 
-app = Flask(__name__, static_folder='public')
+app = Flask(__name__, static_folder='public', static_url_path='')
+
+@app.route('/healthz')
+def healthz():
+    return jsonify({'status': 'ok', 'service': 'dyjx'}), 200
 
 HEADERS_MOBILE = {
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
@@ -330,4 +335,12 @@ def static_files(path):
     return send_from_directory('public', path)
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5802)
+    host = os.environ.get('HOST', '127.0.0.1')
+    port_text = os.environ.get('PORT', '5800')
+    try:
+        port = int(port_text)
+        if not 1 <= port <= 65535:
+            raise ValueError
+    except ValueError:
+        raise SystemExit(f'PORT 配置不合法：{port_text}（必须为 1-65535）')
+    app.run(host=host, port=port)
