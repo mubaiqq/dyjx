@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>视频解析 - 抖音无水印下载</title>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #f8fafc;
+            --card: rgba(255,255,255,0.78);
+            --text: #1a1a2e;
+            --text2: #555;
+            --text3: #999;
+            --accent: #4f46e5;
+            --accent-hover: #4338ca;
+            --accent-light: #eef2ff;
+            --border: rgba(0,0,0,0.06);
+            --shadow: 0 8px 32px rgba(0,0,0,0.08);
+            --radius: 16px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* iOS Safari: 禁止缩放 */
+        input, textarea, select { font-size: 16px !important; }
+
+        /* 背景 */
+        .bg-decor {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; overflow: hidden; pointer-events: none;
+        }
+        .bg-orb {
+            position: absolute; border-radius: 50%;
+            filter: blur(80px); opacity: 0.45;
+            animation: orbFloat 20s ease-in-out infinite;
+        }
+        .bg-orb-1 { width: 500px; height: 500px; top: -10%; left: -5%; background: radial-gradient(circle, #dbeafe, #bfdbfe); }
+        .bg-orb-2 { width: 400px; height: 400px; top: 5%; right: -8%; background: radial-gradient(circle, #fce7f3, #fbcfe8); animation-delay: -5s; }
+        .bg-orb-3 { width: 350px; height: 350px; bottom: 10%; left: 20%; background: radial-gradient(circle, #d1fae5, #a7f3d0); animation-delay: -10s; }
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -20px) scale(1.05); }
+            50% { transform: translate(-20px, 30px) scale(0.95); }
+            75% { transform: translate(15px, 15px) scale(1.02); }
+        }
+        .bg-decor::before {
+            content: '';
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+            background-size: 32px 32px; opacity: 0.25;
+        }
+
+        .wrapper {
+            position: relative; z-index: 1;
+            max-width: 720px; margin: 0 auto;
+            padding: 40px 20px 60px;
+        }
+        .api-entry {
+            position: absolute; top: 24px; right: 20px; min-width: 76px; height: 44px;
+            padding: 0 16px; border-radius: 12px; background: #fff; color: var(--text2);
+            border: 1px solid var(--border); text-decoration: none; font-size: 14px; font-weight: 600;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            transition: color .2s, border-color .2s, background .2s;
+        }
+        .api-entry:hover { color: var(--accent); border-color: rgba(79,70,229,.25); background: var(--accent-light); }
+        .api-entry:focus-visible { outline: 3px solid rgba(79,70,229,.18); outline-offset: 2px; }
+
+        /* Header */
+        .header { text-align: center; margin-bottom: 40px; }
+        .header-icon {
+            width: 64px; height: 64px; border-radius: 18px;
+            background: linear-gradient(135deg, #818cf8, #a78bfa);
+            display: inline-flex; align-items: center; justify-content: center;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(129,140,248,0.3);
+        }
+        .header-icon i { font-size: 28px; color: #fff; }
+        .header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+        .header p { color: var(--text3); font-size: 14px; margin-top: 8px; }
+
+        /* 卡片 */
+        .card {
+            background: var(--card); backdrop-filter: blur(20px);
+            border-radius: var(--radius); border: 1px solid var(--border);
+            box-shadow: var(--shadow); padding: 28px; margin-bottom: 20px;
+        }
+
+        /* 输入区域 */
+        .input-group { display: flex; gap: 10px; }
+        .input-wrap { flex: 1; position: relative; }
+        .input-wrap i {
+            position: absolute; left: 16px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--text3); font-size: 16px; pointer-events: none;
+        }
+        .input {
+            width: 100%;
+            padding: 14px 16px 14px 44px;
+            font-size: 16px !important;
+            border: 1px solid var(--border); border-radius: 12px;
+            background: #fff; color: var(--text);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+        .input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+        }
+        .input::placeholder { color: var(--text3); }
+
+        .btn {
+            padding: 14px 24px; border-radius: 12px;
+            font-size: 15px; font-weight: 600;
+            cursor: pointer; border: none;
+            display: inline-flex; align-items: center; gap: 8px;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-sm { padding: 8px 16px; font-size: 13px; border-radius: 10px; }
+        .btn-outline { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+        .btn-outline:hover { background: #f9fafb; }
+
+        .hint { margin-top: 12px; font-size: 12px; color: var(--text3); }
+        .hint i { margin-right: 4px; }
+
+        /* 错误 */
+        .error-box {
+            display: none; margin-top: 16px;
+            padding: 14px 16px; background: #fef2f2;
+            border: 1px solid #fecaca; border-radius: 12px;
+            color: #dc2626; font-size: 14px;
+        }
+        .error-box i { margin-right: 8px; }
+        .error-box.show { display: flex; align-items: center; }
+
+        /* 结果 */
+        .result { display: none; }
+        .result.show { display: block; }
+
+        /* 视频预览 */
+        .video-preview { border-radius: 12px; overflow: hidden; background: #000; margin-bottom: 20px; }
+        .video-preview video { width: 100%; max-height: 480px; display: block; }
+        .gallery-preview { display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .gallery-preview.show { display: grid; }
+        .gallery-item { position: relative; overflow: hidden; border-radius: 12px; background: #f1f5f9; }
+        .gallery-item img { width: 100%; height: auto; display: block; }
+        .gallery-download {
+            position: absolute; right: 8px; bottom: 8px; width: 34px; height: 34px;
+            border-radius: 50%; background: rgba(255,255,255,.92); color: var(--accent);
+            display: flex; align-items: center; justify-content: center; text-decoration: none;
+        }
+
+        .video-info { display: flex; gap: 12px; margin-bottom: 20px; }
+        .info-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); }
+        .info-item i { color: var(--accent); font-size: 14px; }
+
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+
+        /* JSON */
+        .json-section { margin-top: 20px; }
+        .json-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .json-header h3 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .json-header h3 i { color: var(--accent); }
+        .json-box {
+            background: #1e293b; border-radius: 12px;
+            padding: 20px; overflow-x: auto; position: relative;
+        }
+        .json-box pre {
+            font-family: "SF Mono", "Fira Code", monospace;
+            font-size: 13px; line-height: 1.7; color: #e2e8f0;
+            white-space: pre-wrap; word-break: break-all;
+        }
+        .json-box .copy-btn {
+            position: absolute; top: 12px; right: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #94a3b8; padding: 6px 12px; border-radius: 8px;
+            font-size: 12px; cursor: pointer; transition: all 0.2s;
+        }
+        .json-box .copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+        .json-box .copy-btn.copied { background: #22c55e; color: #fff; border-color: #22c55e; }
+        .json-key { color: #7dd3fc; }
+        .json-string { color: #86efac; }
+        .json-number { color: #fbbf24; }
+
+        /* 加载 */
+        .loading { display: none; }
+        .loading.show { display: inline-flex; align-items: center; gap: 8px; }
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 进度条 */
+        .progress-bar {
+            display: none; margin-top: 16px;
+            height: 4px; background: #e5e7eb;
+            border-radius: 2px; overflow: hidden;
+        }
+        .progress-bar.show { display: block; }
+        .progress-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #818cf8, #a78bfa);
+            border-radius: 2px;
+            transition: width 0.3s;
+            animation: progressPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes progressPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .status-text {
+            display: none; margin-top: 8px;
+            font-size: 12px; color: var(--text3);
+        }
+        .status-text.show { display: block; }
+
+        .footer { text-align: center; margin-top: 40px; color: var(--text3); font-size: 13px; }
+        .footer a { color: var(--accent); text-decoration: none; }
+
+        @media (max-width: 640px) {
+            .wrapper { padding: 24px 16px 40px; }
+            .header h1 { font-size: 22px; }
+            .card { padding: 20px; }
+            .input-group { flex-direction: column; }
+            .btn-primary { width: 100%; justify-content: center; }
+            .actions { flex-direction: column; }
+            .actions .btn { width: 100%; justify-content: center; }
+            .video-info { flex-direction: column; gap: 6px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-decor">
+        <div class="bg-orb bg-orb-1"></div>
+        <div class="bg-orb bg-orb-2"></div>
+        <div class="bg-orb bg-orb-3"></div>
+    </div>
+
+    <div class="wrapper">
+        <a class="api-entry" href="/api-docs" aria-label="打开 API 文档">
+            <i class="fa-solid fa-code"></i><span>API</span>
+        </a>
+        <div class="header">
+            <div class="header-icon"><i class="fa-solid fa-play"></i></div>
+            <h1>视频解析</h1>
+            <p>粘贴抖音分享内容，自动提取链接并解析无水印视频</p>
+        </div>
+
+        <div class="card">
+            <div class="input-group">
+                <div class="input-wrap">
+                    <i class="fa-solid fa-link"></i>
+                    <input type="text" class="input" id="urlInput"
+                        placeholder="粘贴抖音分享内容或链接" autocomplete="off" autocorrect="off" spellcheck="false">
+                </div>
+                <button class="btn btn-primary" id="parseBtn" onclick="doParse()">
+                    <span id="btnText">解析</span>
+                    <div class="loading" id="loading"><div class="spinner"></div></div>
+                </button>
+            </div>
+            <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="status-text" id="statusText"></div>
+            <div class="hint">
+                <i class="fa-solid fa-circle-info"></i>
+                直接粘贴抖音分享的文字，会自动提取其中的链接
+            </div>
+            <div class="error-box" id="errorBox">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span id="errorMsg"></span>
+            </div>
+        </div>
+
+        <div class="result" id="result">
+            <div class="card">
+                <div class="video-preview">
+                    <video id="videoPlayer" controls preload="metadata" playsinline></video>
+                </div>
+                <div class="gallery-preview" id="galleryPreview"></div>
+                <div class="video-info">
+                    <div class="info-item"><i class="fa-solid fa-user"></i><span id="infoAuthor">-</span></div>
+                    <div class="info-item"><i class="fa-solid fa-file-lines"></i><span id="infoTitle">-</span></div>
+                </div>
+                <div class="actions">
+                    <a class="btn btn-primary btn-sm" id="downloadBtn" href="#" target="_blank" download>
+                        <i class="fa-solid fa-download"></i><span id="downloadText">下载视频</span>
+                    </a>
+                    <button class="btn btn-outline btn-sm" onclick="copyLink(this)">
+                        <i class="fa-solid fa-copy"></i>复制链接
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="copyJSON(this)">
+                        <i class="fa-solid fa-code"></i>复制 JSON
+                    </button>
+                </div>
+            </div>
+
+            <div class="card json-section">
+                <div class="json-header">
+                    <h3><i class="fa-solid fa-code"></i>JSON 响应</h3>
+                    <button class="btn btn-outline btn-sm" onclick="copyJSON(this)">
+                        <i class="fa-solid fa-copy"></i>复制
+                    </button>
+                </div>
+                <div class="json-box">
+                    <button class="copy-btn" onclick="copyJSON(this)"><i class="fa-solid fa-copy"></i></button>
+                    <pre id="jsonOutput"></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2026 <a href="/">Mubai</a> · 仅供学习研究使用</p>
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const parseBtn = document.getElementById('parseBtn');
+        const btnText = document.getElementById('btnText');
+        const loadingEl = document.getElementById('loading');
+        const errorBox = document.getElementById('errorBox');
+        const errorMsg = document.getElementById('errorMsg');
+        const resultEl = document.getElementById('result');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const statusText = document.getElementById('statusText');
+
+        let lastResult = null;
+        let parsing = false;
+
+        // 从文本中提取抖音链接
+        function extractDouyinUrl(text) {
+            // 匹配各种抖音链接格式
+            const patterns = [
+                /https?:\/\/v\.douyin\.com\/[\w\-]+\/?/i,
+                /https?:\/\/www\.douyin\.com\/video\/\d+/i,
+                /https?:\/\/www\.douyin\.com\/note\/\d+/i,
+                /https?:\/\/www\.iesdouyin\.com\/share\/video\/\d+/i,
+                /https?:\/\/[\w.]*douyin[\w.]*\/[\w\/\-?=&#%]+/i,
+            ];
+            for (const p of patterns) {
+                const m = text.match(p);
+                if (m) return m[0];
+            }
+            // 兜底：任何看起来像URL的
+            const anyUrl = text.match(/https?:\/\/[^\s\u4e00-\u9fa5]+/);
+            if (anyUrl) return anyUrl[0];
+            return null;
+        }
+
+        // 输入时实时提取链接并显示
+        urlInput.addEventListener('input', () => {
+            const text = urlInput.value;
+            const url = extractDouyinUrl(text);
+            if (url && url !== text.trim()) {
+                // 从文本中提取到了链接，高亮提示
+                urlInput.style.borderColor = '#22c55e';
+            } else {
+                urlInput.style.borderColor = '';
+            }
+        });
+
+        // 粘贴时自动提取链接
+        urlInput.addEventListener('paste', (e) => {
+            setTimeout(() => {
+                const text = urlInput.value.trim();
+                const url = extractDouyinUrl(text);
+                if (url) {
+                    urlInput.value = url;
+                    urlInput.style.borderColor = '';
+                    doParse();
+                }
+            }, 50);
+        });
+
+        // 回车触发
+        urlInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') doParse();
+        });
+
+        function setStatus(msg) {
+            statusText.textContent = msg;
+            statusText.classList.add('show');
+        }
+        function hideStatus() {
+            statusText.classList.remove('show');
+        }
+
+        function setProgress(pct) {
+            progressFill.style.width = pct + '%';
+        }
+
+        async function doParse() {
+            if (parsing) return;
+
+            let input = urlInput.value.trim();
+            if (!input) {
+                showError('请输入抖音分享链接或粘贴分享内容');
+                return;
+            }
+
+            // 自动提取链接
+            const extracted = extractDouyinUrl(input);
+            if (extracted) {
+                urlInput.value = extracted;
+                input = extracted;
+            } else if (!input.startsWith('http')) {
+                showError('未识别到链接，请粘贴完整的抖音分享内容');
+                return;
+            }
+
+            hideError();
+            resultEl.classList.remove('show');
+            parsing = true;
+            parseBtn.disabled = true;
+            btnText.textContent = '解析中';
+            loadingEl.classList.add('show');
+            progressBar.classList.add('show');
+            setProgress(10);
+            setStatus('正在连接服务器...');
+
+            const timer1 = setTimeout(() => { setProgress(30); setStatus('正在启动浏览器...'); }, 2000);
+            const timer2 = setTimeout(() => { setProgress(50); setStatus('正在加载页面...'); }, 5000);
+            const timer3 = setTimeout(() => { setProgress(70); setStatus('正在提取视频...'); }, 10000);
+            const timer4 = setTimeout(() => { setProgress(85); setStatus('快好了...'); }, 20000);
+
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 45000);
+
+                const resp = await fetch('/api/parse?url=' + encodeURIComponent(input), {
+                    signal: controller.signal
+                });
+                clearTimeout(timeout);
+
+                setProgress(95);
+                setStatus('解析完成');
+
+                const data = await resp.json();
+
+                if (data.code !== 200) {
+                    showError(data.error || '解析失败');
+                    return;
+                }
+
+                lastResult = data;
+                showResult(data);
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    showError('请求超时，服务器处理时间过长，请稍后重试');
+                } else {
+                    showError('网络错误，请稍后重试');
+                }
+            } finally {
+                clearTimeout(timer1);
+                clearTimeout(timer2);
+                clearTimeout(timer3);
+                clearTimeout(timer4);
+                parsing = false;
+                parseBtn.disabled = false;
+                btnText.textContent = '解析';
+                loadingEl.classList.remove('show');
+                progressBar.classList.remove('show');
+                hideStatus();
+            }
+        }
+
+        function showResult(data) {
+            const player = document.getElementById('videoPlayer');
+            const videoPreview = player.parentElement;
+            const galleryPreview = document.getElementById('galleryPreview');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const downloadText = document.getElementById('downloadText');
+
+            if (data.type === 'gallery' && Array.isArray(data.images)) {
+                player.pause();
+                player.removeAttribute('src');
+                player.load();
+                videoPreview.style.display = 'none';
+                galleryPreview.innerHTML = data.images.map((image, index) => {
+                    const proxy = '/api/proxy?url=' + encodeURIComponent(image.url);
+                    return '<div class="gallery-item">' +
+                        '<img src="' + proxy + '" alt="图集图片 ' + (index + 1) + '" loading="lazy">' +
+                        '<a class="gallery-download" href="' + proxy + '" target="_blank" download="douyin-' + (index + 1) + '.webp" aria-label="下载第' + (index + 1) + '张图片">' +
+                        '<i class="fa-solid fa-download"></i></a></div>';
+                }).join('');
+                galleryPreview.classList.add('show');
+                downloadBtn.href = '/api/proxy?url=' + encodeURIComponent(data.images[0].url);
+                downloadBtn.removeAttribute('download');
+                downloadText.textContent = '下载首图';
+            } else {
+                galleryPreview.classList.remove('show');
+                galleryPreview.innerHTML = '';
+                videoPreview.style.display = '';
+                player.src = data.url;
+                player.load();
+                downloadBtn.href = data.url;
+                downloadBtn.setAttribute('download', '');
+                downloadText.textContent = '下载视频';
+            }
+
+            document.getElementById('infoAuthor').textContent = data.author;
+            document.getElementById('infoTitle').textContent = data.title;
+
+            document.getElementById('jsonOutput').innerHTML = syntaxHighlight(
+                JSON.stringify(data, null, 2)
+            );
+
+            resultEl.classList.add('show');
+            resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function syntaxHighlight(json) {
+            return json
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"([^"]+)":/g, '<span class="json-key">"$1"</span>:')
+                .replace(/: "([^"]*?)"/g, ': <span class="json-string">"$1"</span>')
+                .replace(/: (\d+)/g, ': <span class="json-number">$1</span>');
+        }
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorBox.classList.add('show');
+        }
+        function hideError() { errorBox.classList.remove('show'); }
+
+        async function copyLink(btn) {
+            if (!lastResult) return;
+            const link = lastResult.type === 'gallery' ? lastResult.images[0].url : lastResult.url;
+            await copyText(link, btn);
+        }
+
+        async function copyJSON(btn) {
+            if (!lastResult) return;
+            await copyText(JSON.stringify(lastResult, null, 2), btn);
+        }
+
+        async function copyText(text, btn) {
+            try {
+                await navigator.clipboard.writeText(text);
+                flashBtn(btn);
+            } catch {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                flashBtn(btn);
+            }
+        }
+
+        function flashBtn(btn) {
+            if (!btn) return;
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>已复制';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 1500);
+        }
+    </script>
+</body>
+</html>

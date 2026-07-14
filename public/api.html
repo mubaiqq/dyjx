@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>API 文档 - 抖音媒体解析</title>
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{--bg:#f6f7fb;--surface:#fbfcff;--surface2:#f0f2f8;--text:#191b24;--muted:#626777;--faint:#8b90a0;--line:#dde0e9;--brand:#4f46e5;--brand-soft:#eeefff;--green:#087f5b;--green-soft:#e8f8f1;--orange:#a55408;--orange-soft:#fff4df;--red:#c92a2a;--red-soft:#fff0f0;--code:#181a22;--code-text:#e8eaf2;--radius:14px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;line-height:1.65}a{color:inherit}.topbar{height:64px;background:rgba(251,252,255,.96);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}.topbar-inner{max-width:1180px;height:100%;margin:auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:11px;text-decoration:none;font-weight:700}.brand-icon{width:36px;height:36px;border-radius:10px;background:var(--brand);color:#fdfdff;display:flex;align-items:center;justify-content:center}.top-actions{display:flex;gap:8px}.nav-btn,.copy-btn,.try-btn{min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font:600 13px inherit;cursor:pointer;transition:background .18s,border-color .18s,color .18s}.nav-btn:hover,.copy-btn:hover{background:var(--brand-soft);border-color:#c9c7fb;color:var(--brand)}.layout{max-width:1180px;margin:0 auto;padding:36px 24px 72px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:48px}.side{position:sticky;top:92px;align-self:start}.side-title{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--faint);margin:0 0 10px 12px}.side a{display:block;padding:8px 12px;border-radius:8px;text-decoration:none;color:var(--muted);font-size:14px}.side a:hover{background:var(--surface2);color:var(--text)}.side a.active{background:var(--brand-soft);color:var(--brand);font-weight:700}main{min-width:0}.eyebrow{display:flex;gap:8px;align-items:center;color:var(--green);font-size:13px;font-weight:700}.status-dot{width:8px;height:8px;border-radius:50%;background:#20a77a}h1{font-size:36px;letter-spacing:-.035em;line-height:1.18;margin:12px 0 12px}h2{font-size:23px;letter-spacing:-.02em;margin:52px 0 16px;scroll-margin-top:90px}h3{font-size:17px;margin:28px 0 12px}.lead{max-width:70ch;color:var(--muted);font-size:16px;margin:0 0 24px}.endpoint{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;border:1px solid var(--line);background:var(--surface);padding:14px;border-radius:var(--radius)}.method{background:var(--green-soft);color:var(--green);padding:5px 9px;border-radius:7px;font:700 12px ui-monospace,SFMono-Regular,Menlo,monospace}.endpoint code,.inline-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.endpoint code{font-size:14px;word-break:break-all}.note{margin-top:14px;padding:13px 15px;border-radius:10px;background:var(--orange-soft);color:#74420b;font-size:14px}.section-intro{color:var(--muted);margin-top:-8px}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}table{width:100%;border-collapse:collapse;min-width:660px}th,td{text-align:left;padding:13px 15px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}tr:last-child td{border-bottom:0}th{color:var(--muted);background:var(--surface2);font-size:12px;font-weight:700}td code{color:var(--brand);background:var(--brand-soft);padding:2px 6px;border-radius:5px;font-size:12px}.required{color:var(--red);font-weight:700}.type-tabs{display:flex;gap:8px;margin-bottom:12px}.tab{min-height:40px;border:1px solid var(--line);background:var(--surface);padding:0 15px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:650}.tab.active{background:var(--brand);border-color:var(--brand);color:#fdfdff}.example{display:none}.example.active{display:block}.code-wrap{position:relative;background:var(--code);border-radius:var(--radius);overflow:hidden}.code-head{height:44px;padding:0 14px;border-bottom:1px solid #30333e;display:flex;align-items:center;justify-content:space-between;color:#aeb3c2;font-size:12px}.code-head .copy-btn{min-height:30px;background:#252832;color:#d5d8e2;border-color:#393d49;padding:0 10px}.code-wrap pre{margin:0;padding:18px 20px;overflow:auto;color:var(--code-text);font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre}.key{color:#8dc8ff}.str{color:#a7e6bd}.num{color:#f7ca7b}.bool{color:#d4a7ff}.try-box{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:20px}.field-label{display:block;font-size:13px;font-weight:700;margin-bottom:8px}.try-row{display:flex;gap:10px}.try-row input{min-width:0;flex:1;height:44px;border:1px solid var(--line);border-radius:10px;background:#fdfdff;padding:0 13px;font-size:16px;outline:none}.try-row input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(79,70,229,.12)}.try-btn{border-color:var(--brand);background:var(--brand);color:#fdfdff;min-width:104px}.try-btn:disabled{opacity:.55;cursor:not-allowed}.try-result{display:none;margin-top:14px}.try-result.show{display:block}.http-status{font:700 12px ui-monospace,SFMono-Regular,Menlo,monospace}.response-map{display:grid;grid-template-columns:1fr 1fr;gap:14px}.response-card{border:1px solid var(--line);border-radius:var(--radius);padding:18px;background:var(--surface)}.response-card h3{margin:0 0 5px}.response-card p{font-size:14px;color:var(--muted);margin:0 0 14px}.tag{display:inline-flex;padding:3px 7px;border-radius:6px;font:700 11px ui-monospace,SFMono-Regular,Menlo,monospace}.tag-video{background:var(--green-soft);color:var(--green)}.tag-gallery{background:var(--orange-soft);color:var(--orange)}.errors{display:grid;gap:8px}.error-row{display:grid;grid-template-columns:58px 1fr;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:14px}.error-code{font-weight:750;color:var(--red)}.callout{padding:16px;border-radius:var(--radius);background:var(--brand-soft);color:#34308c;font-size:14px}.footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,16px);background:#20222b;color:#f7f7fa;padding:10px 15px;border-radius:9px;font-size:13px;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}:focus-visible{outline:3px solid rgba(79,70,229,.2);outline-offset:2px}@media(max-width:820px){.layout{display:block;padding:28px 18px 56px}.side{display:none}.topbar-inner{padding:0 16px}h1{font-size:29px}.response-map{grid-template-columns:1fr}.endpoint{grid-template-columns:auto 1fr}.endpoint .copy-btn{grid-column:1/-1;width:100%}.try-row{flex-direction:column}.try-btn{height:44px}.top-actions .nav-btn span{display:none}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><a class="brand" href="/"><span class="brand-icon"><i class="fa-solid fa-code"></i></span><span>媒体解析 API</span></a><div class="top-actions"><a class="nav-btn" href="/"><i class="fa-solid fa-arrow-left"></i><span>返回解析器</span></a></div></div></header>
+<div class="layout">
+<aside class="side"><p class="side-title">API 文档</p><a href="#overview">概览</a><a href="#endpoint">调用地址</a><a href="#params">请求参数</a><a href="#debugger">在线调试</a><a href="#responses">响应格式</a><a href="#fields">字段说明</a><a href="#errors">错误处理</a><a href="#examples">调用示例</a><a href="#notes">接入须知</a></aside>
+<main>
+<section id="overview"><div class="eyebrow"><span class="status-dot"></span>服务正常 · 无需鉴权</div><h1>抖音视频与图集解析 API</h1><p class="lead">一个接口自动识别普通视频和图文作品。响应中的 <code class="inline-code">type</code> 是业务分流依据：视频返回 <code class="inline-code">video</code>，图集返回 <code class="inline-code">gallery</code>。</p></section>
+<section id="endpoint"><h2>调用地址</h2><div class="endpoint"><span class="method">GET</span><code id="endpointUrl">https://video-bak.mubaiyun.xyz/api/parse?url={抖音链接}</code><button class="copy-btn" data-copy-target="endpointUrl"><i class="fa-regular fa-copy"></i>复制</button></div><div class="note"><i class="fa-solid fa-circle-info"></i> 参数值必须进行 URL 编码。可传短链接、作品页链接，或完整分享文字中的抖音链接。</div></section>
+<section id="params"><h2>请求参数</h2><p class="section-intro">请求方法为 GET，响应编码为 UTF-8，Content-Type 为 application/json。</p><div class="table-wrap"><table><thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td><code>url</code></td><td>string</td><td class="required">是</td><td>抖音分享短链、视频链接或图文链接。调用方应先提取分享文字中的 URL。</td><td><code>https://v.douyin.com/xxx/</code></td></tr></tbody></table></div></section>
+<section id="debugger"><h2>在线调试</h2><p class="section-intro">输入真实链接直接请求当前 API，结果会在下方显示。</p><div class="try-box"><label class="field-label" for="tryUrl">抖音链接</label><div class="try-row"><input id="tryUrl" value="https://v.douyin.com/xBGobTTRJ9o/" autocomplete="off"><button class="try-btn" id="tryBtn"><i class="fa-solid fa-play"></i><span>发送请求</span></button></div><div class="try-result" id="tryResult"><div class="code-wrap"><div class="code-head"><span class="http-status" id="tryStatus">等待请求</span><button class="copy-btn" data-copy-target="tryOutput"><i class="fa-regular fa-copy"></i>复制 JSON</button></div><pre id="tryOutput"></pre></div></div></div></section>
+<section id="responses"><h2>响应格式</h2><div class="response-map"><article class="response-card"><span class="tag tag-video">type: video</span><h3>视频响应</h3><p>使用 <code>url</code> 播放或下载视频，<code>images</code> 固定为空数组。</p></article><article class="response-card"><span class="tag tag-gallery">type: gallery</span><h3>图集响应</h3><p>遍历 <code>images</code> 获取全部图片，<code>url</code> 固定为空字符串。</p></article></div><h3>成功响应示例</h3><div class="type-tabs"><button class="tab active" data-tab="video">视频 JSON</button><button class="tab" data-tab="gallery">图集 JSON</button></div>
+<div class="example active" data-example="video"><div class="code-wrap"><div class="code-head"><span>200 · video</span><button class="copy-btn" data-copy-target="videoJson"><i class="fa-regular fa-copy"></i>复制</button></div><pre id="videoJson">{
+  "code": 200,
+  "type": "video",
+  "videoId": "7520000000000000000",
+  "title": "作品标题",
+  "author": "作者昵称",
+  "url": "https://video-cdn.example.com/video.mp4",
+  "cover": "",
+  "images": [],
+  "imageCount": 0,
+  "sourceUrl": "https://www.iesdouyin.com/share/video/752.../",
+  "cached": false
+}</pre></div></div>
+<div class="example" data-example="gallery"><div class="code-wrap"><div class="code-head"><span>200 · gallery</span><button class="copy-btn" data-copy-target="galleryJson"><i class="fa-regular fa-copy"></i>复制</button></div><pre id="galleryJson">{
+  "code": 200,
+  "type": "gallery",
+  "videoId": "7662259898261030499",
+  "title": "#周末去哪儿 #昆明旅游",
+  "author": "作者昵称",
+  "url": "",
+  "cover": "https://p3-sign.douyinpic.com/cover.webp",
+  "images": [
+    {
+      "url": "https://p3-sign.douyinpic.com/image-1.webp",
+      "width": 880,
+      "height": 1168
+    }
+  ],
+  "imageCount": 1,
+  "sourceUrl": "https://www.iesdouyin.com/share/note/766.../",
+  "cached": false
+}</pre></div></div></section>
+<section id="fields"><h2>字段说明</h2><div class="table-wrap"><table><thead><tr><th>字段</th><th>类型</th><th>适用类型</th><th>说明</th></tr></thead><tbody>
+<tr><td><code>code</code></td><td>integer</td><td>全部</td><td>业务状态码。200 成功，400 参数错误，500 解析失败。</td></tr>
+<tr><td><code>type</code></td><td>string</td><td>全部</td><td><code>video</code>、<code>gallery</code> 或 <code>error</code>。调用方应优先判断此字段。</td></tr>
+<tr><td><code>videoId</code></td><td>string</td><td>视频/图集</td><td>抖音作品数字 ID。字段名为兼容旧版保留，图集同样返回。</td></tr>
+<tr><td><code>title</code></td><td>string</td><td>视频/图集</td><td>作品标题或描述。上游缺失时可能为“未知标题”。</td></tr>
+<tr><td><code>author</code></td><td>string</td><td>视频/图集</td><td>作者昵称。上游缺失时可能为“未知作者”。</td></tr>
+<tr><td><code>url</code></td><td>string</td><td>视频</td><td>视频播放/下载直链。图集响应中为空字符串。</td></tr>
+<tr><td><code>cover</code></td><td>string</td><td>视频/图集</td><td>封面地址。当前图集为首图，视频可能为空。</td></tr>
+<tr><td><code>images</code></td><td>array</td><td>图集</td><td>图片对象数组，视频响应中固定为空数组。</td></tr>
+<tr><td><code>images[].url</code></td><td>string</td><td>图集</td><td>原始图片地址。地址包含有效期，建议按需使用，不要永久存储。</td></tr>
+<tr><td><code>images[].width</code></td><td>integer</td><td>图集</td><td>图片原始宽度，单位像素。</td></tr>
+<tr><td><code>images[].height</code></td><td>integer</td><td>图集</td><td>图片原始高度，单位像素。</td></tr>
+<tr><td><code>imageCount</code></td><td>integer</td><td>视频/图集</td><td>图片数量。视频固定为 0。</td></tr>
+<tr><td><code>sourceUrl</code></td><td>string</td><td>视频/图集/错误</td><td>短链接重定向后的抖音作品页，用于追踪来源。</td></tr>
+<tr><td><code>cached</code></td><td>boolean</td><td>视频/图集</td><td>是否命中服务端缓存。图集当前固定为 false。</td></tr>
+<tr><td><code>error</code></td><td>string</td><td>错误</td><td>可直接展示给开发者的错误原因。</td></tr>
+</tbody></table></div></section>
+<section id="errors"><h2>错误处理</h2><div class="errors"><div class="error-row"><span class="error-code">400</span><span>缺少 <code>url</code> 参数，或链接不是有效的抖音域名。</span></div><div class="error-row"><span class="error-code">500</span><span>上游页面结构变化、作品不可访问、链接失效或未提取到媒体地址。</span></div></div><h3>错误响应</h3><div class="code-wrap"><div class="code-head"><span>业务错误</span><button class="copy-btn" data-copy-target="errorJson"><i class="fa-regular fa-copy"></i>复制</button></div><pre id="errorJson">{
+  "code": 400,
+  "type": "error",
+  "error": "请提供 url 参数"
+}</pre></div><div class="note">当前接口通过 JSON 内的 <code>code</code> 表示业务状态，HTTP 状态通常为 200。接入时不要只判断 HTTP 状态。</div></section>
+<section id="examples"><h2>调用示例</h2><h3>cURL</h3><div class="code-wrap"><div class="code-head"><span>Shell</span><button class="copy-btn" data-copy-target="curlCode"><i class="fa-regular fa-copy"></i>复制</button></div><pre id="curlCode">curl --get \
+  --data-urlencode "url=https://v.douyin.com/xxxx/" \
+  "https://video-bak.mubaiyun.xyz/api/parse"</pre></div><h3>JavaScript</h3><div class="code-wrap"><div class="code-head"><span>Fetch</span><button class="copy-btn" data-copy-target="jsCode"><i class="fa-regular fa-copy"></i>复制</button></div><pre id="jsCode">const shareUrl = 'https://v.douyin.com/xxxx/';
+const endpoint = new URL('https://video-bak.mubaiyun.xyz/api/parse');
+endpoint.searchParams.set('url', shareUrl);
+
+const data = await fetch(endpoint).then(r => r.json());
+if (data.code !== 200) throw new Error(data.error);
+
+if (data.type === 'video') {
+  console.log(data.url);
+} else if (data.type === 'gallery') {
+  data.images.forEach(image => console.log(image.url));
+}</pre></div><h3>Python</h3><div class="code-wrap"><div class="code-head"><span>Requests</span><button class="copy-btn" data-copy-target="pyCode"><i class="fa-regular fa-copy"></i>复制</button></div><pre id="pyCode">import requests
+
+response = requests.get(
+    'https://video-bak.mubaiyun.xyz/api/parse',
+    params={'url': 'https://v.douyin.com/xxxx/'},
+    timeout=45,
+)
+data = response.json()
+
+if data['code'] != 200:
+    raise RuntimeError(data['error'])
+
+media_urls = (
+    [data['url']] if data['type'] == 'video'
+    else [image['url'] for image in data['images']]
+)</pre></div></section>
+<section id="notes"><h2>接入须知</h2><div class="callout"><strong>推荐判断顺序：</strong>先判断 <code>code === 200</code>，再按 <code>type</code> 分流，最后读取 <code>url</code> 或 <code>images</code>。媒体 CDN 地址可能过期，不建议长期持久化。解析耗时受抖音上游网络影响，客户端超时建议设置为 45 秒。</div></section>
+<div class="footer">API 文档基于当前线上响应格式编写 · 最后更新：2026-07-14</div>
+</main></div><div class="toast" id="toast" role="status" aria-live="polite">已复制</div>
+<script>
+const toast=document.getElementById('toast');let toastTimer;
+function notify(text){toast.textContent=text;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),1800)}
+async function copyText(text){try{await navigator.clipboard.writeText(text);notify('已复制到剪贴板')}catch{const t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();notify('已复制到剪贴板')}}
+document.querySelectorAll('[data-copy-target]').forEach(btn=>btn.addEventListener('click',()=>copyText(document.getElementById(btn.dataset.copyTarget).textContent.trim())));
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));document.querySelectorAll('.example').forEach(x=>x.classList.toggle('active',x.dataset.example===btn.dataset.tab))}));
+const sideLinks=[...document.querySelectorAll('.side a')], sections=sideLinks.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);if('IntersectionObserver'in window){const observer=new IntersectionObserver(entries=>{const current=entries.filter(e=>e.isIntersecting).sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top)[0];if(current)sideLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+current.target.id))},{rootMargin:'-80px 0px -70% 0px'});sections.forEach(s=>observer.observe(s))}
+function highlight(json){return json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"([^"\\]*(?:\\.[^"\\]*)*)"(?=\s*:)/g,'<span class="key">"$1"</span>').replace(/:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/g,': <span class="str">"$1"</span>').replace(/:\s*(true|false|null)/g,': <span class="bool">$1</span>').replace(/:\s*(-?\d+(?:\.\d+)?)/g,': <span class="num">$1</span>')}
+const tryBtn=document.getElementById('tryBtn');tryBtn.addEventListener('click',async()=>{const input=document.getElementById('tryUrl').value.trim(),box=document.getElementById('tryResult'),out=document.getElementById('tryOutput'),status=document.getElementById('tryStatus');if(!input){notify('请输入抖音链接');return}tryBtn.disabled=true;tryBtn.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i><span>请求中</span>';box.classList.add('show');status.textContent='请求中';out.textContent='';try{const start=performance.now();const r=await fetch('/api/parse?url='+encodeURIComponent(input));const data=await r.json();const ms=Math.round(performance.now()-start);status.textContent='HTTP '+r.status+' · 业务码 '+data.code+' · '+ms+' ms';out.innerHTML=highlight(JSON.stringify(data,null,2))}catch(e){status.textContent='请求失败';out.textContent=e.message}finally{tryBtn.disabled=false;tryBtn.innerHTML='<i class="fa-solid fa-play"></i><span>发送请求</span>'}});
+</script>
+</body></html>
