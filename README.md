@@ -1,14 +1,26 @@
-# 抖音视频与图集解析器
+# 抖音视频、图集与实况解析器
 
-一个基于 Flask 的轻量抖音媒体解析服务，支持普通视频和图文作品（图集）。项目包含解析页面、API 文档页面和可直接调用的 JSON API。
+一个基于 Flask 的轻量抖音媒体解析服务，支持普通视频、图文作品（图集）和 Live Photo 实况照片。项目包含解析页面、API 文档页面和可直接调用的 JSON API。
+
+## 最新更新
+
+### 2026-07-17：支持抖音实况照片解析
+
+- 自动识别包含 Live Photo 的抖音图文作品
+- 同时保留每张实况照片的静态原图与有声 MP4
+- 返回实况视频地址、时长和分辨率
+- 在线解析页面支持实况预览，并可分别下载原图和实况视频
+- 媒体代理支持 MP4 Range 请求，可拖动播放进度
+- API 使用 `mediaType: live_photo` 标识实况作品，使用 `images[].videoUrl` 返回实况视频
 
 ## 功能
 
 - 抖音分享短链解析
 - 普通视频无水印地址提取
 - 图文作品原图列表提取
-- 视频与图集统一响应结构
-- 图集图片代理，处理防盗链与跨域限制
+- Live Photo 实况照片及对应有声 MP4 提取
+- 视频、图集与实况统一响应结构
+- 图片与视频媒体代理，处理防盗链、跨域和 Range 请求
 - 在线解析页面
 - 完整 API 文档及在线调试
 - 移动端适配
@@ -20,10 +32,10 @@
 
 ## 一键安装 / 更新
 
-适用于 Ubuntu / Debian。脚本会自动安装必要依赖、拉取最新源码、创建 Python 虚拟环境、注册 systemd 服务、启用开机自启，并在启动后执行健康检查。以下命令固定到 `v1.0.2` 版本；你也可以先下载并审阅 `deploy.sh` 后再执行。
+适用于 Ubuntu / Debian。脚本会自动安装必要依赖、拉取最新源码、创建 Python 虚拟环境、注册 systemd 服务、启用开机自启，并在启动后执行健康检查。以下命令使用 `main` 分支的最新版本；你也可以先下载并审阅 `deploy.sh` 后再执行。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mubaiqq/dyjx/v1.0.2/deploy.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/mubaiqq/dyjx/main/deploy.sh | sudo bash
 ```
 
 > 同一条命令可重复执行。首次运行会安装到 `/opt/dyjx`；再次运行会自动拉取 GitHub 最新版本并覆盖更新。更新失败或健康检查不通过时，会自动恢复旧版本。项目不保存业务数据，因此更新无需迁移数据。
@@ -50,7 +62,7 @@ sudo journalctl -u dyjx -f
 可通过环境变量覆盖默认配置：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mubaiqq/dyjx/v1.0.2/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/mubaiqq/dyjx/main/deploy.sh \
   | sudo INSTALL_DIR=/opt/dyjx PORT=5800 SERVICE_NAME=dyjx RUN_USER=www-data bash
 ```
 
@@ -121,6 +133,7 @@ curl --get \
 {
   "code": 200,
   "type": "gallery",
+  "mediaType": "image",
   "videoId": "7662259898261030499",
   "title": "作品标题",
   "author": "作者昵称",
@@ -134,7 +147,40 @@ curl --get \
     }
   ],
   "imageCount": 1,
+  "livePhotoCount": 0,
   "sourceUrl": "https://www.iesdouyin.com/share/note/766.../",
+  "cached": false
+}
+```
+
+### 实况照片响应
+
+实况作品仍使用 `type: gallery`，通过 `mediaType: live_photo` 区分。每个 `images[]` 项始终保留静态原图；存在实况视频时，会额外返回 `videoUrl`、`duration`、`videoWidth` 和 `videoHeight`。
+
+```json
+{
+  "code": 200,
+  "type": "gallery",
+  "mediaType": "live_photo",
+  "videoId": "7519121325147933952",
+  "title": "实况照片作品",
+  "author": "作者昵称",
+  "url": "",
+  "cover": "https://example.com/live-cover.webp",
+  "images": [
+    {
+      "url": "https://example.com/live-cover.webp",
+      "width": 1080,
+      "height": 1440,
+      "videoUrl": "https://example.com/live-photo.mp4",
+      "duration": 2485,
+      "videoWidth": 720,
+      "videoHeight": 960
+    }
+  ],
+  "imageCount": 1,
+  "livePhotoCount": 1,
+  "sourceUrl": "https://www.iesdouyin.com/share/note/751.../",
   "cached": false
 }
 ```
@@ -145,13 +191,16 @@ curl --get \
 
 ```text
 .
-├── app.py               # Flask 后端与解析逻辑
+├── app.py                 # Flask 后端与解析逻辑
+├── douyin_abogus.py       # 抖音 Web API 请求参数生成
+├── extract_live_photos.py # Playwright 实况媒体提取
 ├── deploy.sh            # 首次安装/后续更新脚本
 ├── public/
 │   ├── index.html       # 在线解析页面
 │   └── api.html         # API 文档页面
 ├── requirements.txt
 ├── start.sh
+├── tests/                 # 实况解析单元测试
 └── README.md
 ```
 
