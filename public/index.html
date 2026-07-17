@@ -156,9 +156,12 @@
         .gallery-preview { display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
         .gallery-preview.show { display: grid; }
         .gallery-item { position: relative; overflow: hidden; border-radius: 12px; background: #f1f5f9; }
-        .gallery-item img { width: 100%; height: auto; display: block; }
+        .gallery-item img, .gallery-item video { width: 100%; height: auto; display: block; }
+        .gallery-item video { max-height: 520px; background: #000; }
+        .live-badge { position: absolute; left: 8px; top: 8px; z-index: 2; padding: 4px 8px; border-radius: 999px; background: rgba(15,23,42,.78); color: #fff; font-size: 11px; }
+        .gallery-actions { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 7px; z-index: 2; }
         .gallery-download {
-            position: absolute; right: 8px; bottom: 8px; width: 34px; height: 34px;
+            width: 34px; height: 34px;
             border-radius: 50%; background: rgba(255,255,255,.92); color: var(--accent);
             display: flex; align-items: center; justify-content: center; text-decoration: none;
         }
@@ -494,16 +497,26 @@
                 player.load();
                 videoPreview.style.display = 'none';
                 galleryPreview.innerHTML = data.images.map((image, index) => {
-                    const proxy = '/api/proxy?url=' + encodeURIComponent(image.url);
-                    return '<div class="gallery-item">' +
-                        '<img src="' + proxy + '" alt="图集图片 ' + (index + 1) + '" loading="lazy">' +
-                        '<a class="gallery-download" href="' + proxy + '" target="_blank" download="douyin-' + (index + 1) + '.webp" aria-label="下载第' + (index + 1) + '张图片">' +
-                        '<i class="fa-solid fa-download"></i></a></div>';
+                    const imageProxy = '/api/proxy?url=' + encodeURIComponent(image.url);
+                    const videoProxy = image.videoUrl ? '/api/proxy?url=' + encodeURIComponent(image.videoUrl) : '';
+                    const media = image.videoUrl
+                        ? '<video controls playsinline preload="metadata" poster="' + imageProxy + '" src="' + videoProxy + '"></video><span class="live-badge"><i class="fa-solid fa-circle-play"></i> 实况</span>'
+                        : '<img src="' + imageProxy + '" alt="图集图片 ' + (index + 1) + '" loading="lazy">';
+                    const videoDownload = image.videoUrl
+                        ? '<a class="gallery-download" href="' + videoProxy + '" target="_blank" download="douyin-live-' + (index + 1) + '.mp4" aria-label="下载第' + (index + 1) + '个实况视频"><i class="fa-solid fa-video"></i></a>'
+                        : '';
+                    return '<div class="gallery-item">' + media +
+                        '<div class="gallery-actions">' + videoDownload +
+                        '<a class="gallery-download" href="' + imageProxy + '" target="_blank" download="douyin-' + (index + 1) + '.webp" aria-label="下载第' + (index + 1) + '张图片">' +
+                        '<i class="fa-solid fa-image"></i></a></div></div>';
                 }).join('');
                 galleryPreview.classList.add('show');
-                downloadBtn.href = '/api/proxy?url=' + encodeURIComponent(data.images[0].url);
-                downloadBtn.removeAttribute('download');
-                downloadText.textContent = '下载首图';
+                const firstLive = data.images.find(image => image.videoUrl);
+                downloadBtn.href = firstLive
+                    ? '/api/proxy?url=' + encodeURIComponent(firstLive.videoUrl)
+                    : '/api/proxy?url=' + encodeURIComponent(data.images[0].url);
+                downloadBtn.setAttribute('download', '');
+                downloadText.textContent = firstLive ? '下载首个实况视频' : '下载首图';
             } else {
                 galleryPreview.classList.remove('show');
                 galleryPreview.innerHTML = '';

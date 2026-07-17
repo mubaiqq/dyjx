@@ -9,6 +9,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+live_photo_cache_*.json
 
 # Legacy Node.js prototype; the deployed service uses Flask.
 /index.js

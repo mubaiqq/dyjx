@@ -1,11 +1,15 @@
 import re
 import json
 import os
+import sys
 import time
 import threading
+import subprocess
 import requests
+from urllib.parse import quote, urlencode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, request, jsonify, send_from_directory, Response
+from douyin_abogus import ABogus
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 
@@ -16,6 +20,28 @@ def healthz():
 HEADERS_MOBILE = {
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
     'Accept-Language': 'zh-CN,zh;q=0.9',
+}
+
+HEADERS_DESKTOP = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
+    'Accept-Language': 'zh-CN,zh;q=0.9',
+    'Referer': 'https://www.douyin.com/',
+}
+
+DOUYIN_DETAIL_PARAMS = {
+    'device_platform': 'webapp', 'aid': '6383', 'channel': 'channel_pc_web',
+    'pc_client_type': 1, 'version_code': '290100', 'version_name': '29.1.0',
+    'cookie_enabled': 'true', 'screen_width': 1920, 'screen_height': 1080,
+    'browser_language': 'zh-CN', 'browser_platform': 'Win32',
+    'browser_name': 'Chrome', 'browser_version': '130.0.0.0',
+    'browser_online': 'true', 'engine_name': 'Blink',
+    'engine_version': '130.0.0.0', 'os_name': 'Windows', 'os_version': '10',
+    'cpu_core_num': 12, 'device_memory': 8, 'platform': 'PC', 'downlink': '10',
+    'effective_type': '4g', 'from_user_page': '1', 'locate_query': 'false',
+    'need_time_list': '1', 'pc_libra_divert': 'Windows',
+    'publish_video_strategy_type': '2', 'round_trip_time': '0',
+    'show_live_replay_strategy': '1', 'time_list_query': '0',
+    'whale_cut_token': '', 'update_version_code': '170400', 'msToken': '',
 }
 
 _cache = {}
@@ -107,14 +133,146 @@ def task_parse_share(url):
         return None, [], '', ''
 
 
+def extract_live_photo_video(image):
+    """从图片对象中提取对应的实况 MP4，优先使用 H.264 地址。"""
+    video = image.get('video') if isinstance(image, dict) else None
+    if not isinstance(video, dict):
+        return None
+    for key in ('play_addr_h264', 'play_addr', 'download_addr'):
+        address = video.get(key) or {}
+        urls = address.get('url_list') or []
+        if urls:
+            return {
+                'url': urls[0],
+                'duration': video.get('duration', 0),
+                'width': address.get('width') or video.get('width', 0),
+                'height': address.get('height') or video.get('height', 0),
+            }
+    return None
+
+
+def build_gallery_result(item, source_url):
+    images = []
+    live_photo_count = 0
+    for image in item.get('images') or []:
+        urls = image.get('url_list') or []
+        if not urls:
+            continue
+        media = {
+            'url': urls[0],
+            'width': image.get('width', 0),
+            'height': image.get('height', 0),
+        }
+        motion = extract_live_photo_video(image)
+        if motion:
+            media['videoUrl'] = motion['url']
+            media['duration'] = motion['duration']
+            media['videoWidth'] = motion['width']
+            media['videoHeight'] = motion['height']
+            live_photo_count += 1
+        images.append(media)
+    if not images:
+        return None
+    author = item.get('author') or {}
+    return {
+        'code': 200,
+        'type': 'gallery',
+        'mediaType': 'live_photo' if live_photo_count else 'image',
+        'videoId': item.get('aweme_id') or extract_video_id(source_url) or 'unknown',
+        'title': item.get('desc') or '抖音图集',
+        'author': author.get('nickname') or '未知作者',
+        'images': images,
+        'imageCount': len(images),
+        'livePhotoCount': live_photo_count,
+        'url': '',
+        'cover': images[0]['url'],
+        'sourceUrl': source_url,
+        'cached': False,
+    }
+
+
+def fetch_aweme_detail(aweme_id):
+    """读取完整作品详情；分享页 SSR 会省略图片内的 Live Photo 视频字段。"""
+    if not aweme_id:
+        return None
+    params = {**DOUYIN_DETAIL_PARAMS, 'aweme_id': aweme_id}
+    a_bogus = quote(ABogus().get_value(params), safe='')
+    endpoint = ('https://www.douyin.com/aweme/v1/web/aweme/detail/?' +
+                urlencode(params) + '&a_bogus=' + a_bogus)
+    try:
+        response = requests.get(endpoint, headers=HEADERS_DESKTOP, timeout=15)
+        if response.content:
+            return response.json().get('aweme_detail')
+    except Exception:
+        pass
+    return None
+
+
+def load_live_photo_cache(aweme_id, images):
+    """读取已确认作品的 URI→MP4 映射，并按当前 SSR 图片 URI 配对。"""
+    path = os.path.join(os.path.dirname(__file__), f'live_photo_cache_{aweme_id}.json')
+    try:
+        with open(path, 'r', encoding='utf-8') as handle:
+            mapping = json.load(handle)
+    except Exception:
+        return []
+    result = []
+    for index, image in enumerate(images):
+        media = mapping.get(image.get('uri')) or {}
+        if media.get('videoUrl'):
+            result.append({'index': index, **media})
+    return result
+
+
+def fetch_live_photos_browser(aweme_id):
+    """用独立 Playwright 进程补齐被 SSR 省略的实况 MP4。"""
+    if not aweme_id:
+        return []
+    script = os.path.join(os.path.dirname(__file__), 'extract_live_photos.py')
+    try:
+        completed = subprocess.run(
+            [sys.executable, script, aweme_id],
+            capture_output=True, text=True, timeout=55, check=True,
+            env={**os.environ, 'PLAYWRIGHT_BROWSERS_PATH':
+                 os.environ.get('PLAYWRIGHT_BROWSERS_PATH', '/home/ubuntu/.cache/ms-playwright')},
+        )
+        data = json.loads(completed.stdout)
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def merge_browser_live_photos(item, browser_media):
+    """按页面 slide 索引把浏览器提取的视频配回 SSR 图片。"""
+    images = item.get('images') or []
+    for media in browser_media:
+        index = media.get('index')
+        if not isinstance(index, int) or not 0 <= index < len(images):
+            continue
+        video_url = media.get('videoUrl')
+        if not video_url:
+            continue
+        images[index]['video'] = {
+            'duration': media.get('duration', 0),
+            'width': media.get('videoWidth', 0),
+            'height': media.get('videoHeight', 0),
+            'play_addr_h264': {
+                'url_list': [video_url],
+                'width': media.get('videoWidth', 0),
+                'height': media.get('videoHeight', 0),
+            },
+        }
+    return item
+
+
 def task_parse_gallery(url):
     """从图文分享页的 _ROUTER_DATA 提取无水印图片。"""
     try:
         source_url = url
-        # slides 分享页只负责跳转，完整图集数据位于同作品 ID 的 note 分享页。
-        slide_id = re.search(r'/share/slides/(\d+)', url)
-        if slide_id:
-            url = f'https://www.iesdouyin.com/share/note/{slide_id.group(1)}/'
+        # www.douyin.com/note 与 slides 页面不含可直接解析的 SSR，统一切到 ies 分享页。
+        note_id = re.search(r'/(?:share/)?(?:note|slides)/(\d+)', url)
+        if note_id:
+            url = f'https://www.iesdouyin.com/share/note/{note_id.group(1)}/'
         resp = requests.get(url, headers=HEADERS_MOBILE, allow_redirects=True, timeout=12)
         match = re.search(r'window\._ROUTER_DATA\s*=\s*(\{.*?\})\s*</script>', resp.text, re.S)
         if not match:
@@ -131,33 +289,18 @@ def task_parse_gallery(url):
         if not item or not item.get('images'):
             return None
 
-        images = []
-        for image in item['images']:
-            # url_list 是原始无水印图；download_url_list 通常带抖音水印。
-            urls = image.get('url_list') or []
-            if urls:
-                images.append({
-                    'url': urls[0],
-                    'width': image.get('width', 0),
-                    'height': image.get('height', 0),
-                })
-        if not images:
-            return None
-
-        author = item.get('author') or {}
-        return {
-            'code': 200,
-            'type': 'gallery',
-            'videoId': item.get('aweme_id') or extract_video_id(resp.url) or 'unknown',
-            'title': item.get('desc') or '抖音图集',
-            'author': author.get('nickname') or '未知作者',
-            'images': images,
-            'imageCount': len(images),
-            'url': '',
-            'cover': images[0]['url'],
-            'sourceUrl': source_url,
-            'cached': False,
-        }
+        # SSR 只返回静态图。先尝试 detail API；空响应时用浏览器按 slide 补齐 MP4。
+        if not any(extract_live_photo_video(image) for image in item['images']):
+            aweme_id = item.get('aweme_id') or extract_video_id(resp.url)
+            detail = fetch_aweme_detail(aweme_id)
+            if detail and detail.get('images'):
+                item = detail
+            else:
+                browser_media = load_live_photo_cache(aweme_id, item['images'])
+                if not browser_media:
+                    browser_media = fetch_live_photos_browser(aweme_id)
+                item = merge_browser_live_photos(item, browser_media)
+        return build_gallery_result(item, source_url)
     except Exception:
         return None
 
@@ -299,19 +442,27 @@ def api_parse():
 
 @app.route('/api/proxy')
 def api_proxy():
-    """代理抖音图片，避免浏览器端防盗链和跨域限制。"""
+    """代理抖音图片和实况 MP4，支持视频 Range 请求。"""
     url = request.args.get('url', '').strip()
-    if not url or not re.match(r'^https://[^/]+(?:douyinpic\.com|byteimg\.com)/', url, re.I):
-        return 'Invalid image url', 400
+    allowed = r'^https://[^/]+(?:douyinpic\.com|byteimg\.com|zjcdn\.com|douyinstatic\.com|douyinvod\.com|365yg\.com|ppxvod\.com|ixigua\.com)/'
+    if not url or not re.match(allowed, url, re.I):
+        return 'Invalid media url', 400
     try:
-        upstream = requests.get(url, headers={
+        request_headers = {
             **HEADERS_MOBILE,
             'Referer': 'https://www.douyin.com/',
-        }, stream=True, timeout=20, allow_redirects=True)
+            'Accept': '*/*',
+        }
+        range_header = request.headers.get('Range')
+        if range_header:
+            request_headers['Range'] = range_header
+        upstream = requests.get(url, headers=request_headers,
+                                stream=True, timeout=30, allow_redirects=True)
         excluded = {'content-encoding', 'content-length', 'transfer-encoding', 'connection'}
         headers = {k: v for k, v in upstream.headers.items() if k.lower() not in excluded}
         headers['Cache-Control'] = 'public, max-age=3600'
         headers['Access-Control-Allow-Origin'] = '*'
+        headers['Accept-Ranges'] = 'bytes'
 
         def generate():
             for chunk in upstream.iter_content(chunk_size=64 * 1024):
@@ -319,9 +470,9 @@ def api_proxy():
                     yield chunk
 
         return Response(generate(), status=upstream.status_code, headers=headers,
-                        content_type=upstream.headers.get('Content-Type', 'image/webp'))
+                        content_type=upstream.headers.get('Content-Type', 'application/octet-stream'))
     except Exception:
-        return 'Image proxy error', 502
+        return 'Media proxy error', 502
 
 
 @app.route('/')

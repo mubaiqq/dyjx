@@ -15,11 +15,11 @@
 <div class="layout">
 <aside class="side"><p class="side-title">API 文档</p><a href="#overview">概览</a><a href="#endpoint">调用地址</a><a href="#params">请求参数</a><a href="#debugger">在线调试</a><a href="#responses">响应格式</a><a href="#fields">字段说明</a><a href="#errors">错误处理</a><a href="#examples">调用示例</a><a href="#notes">接入须知</a></aside>
 <main>
-<section id="overview"><div class="eyebrow"><span class="status-dot"></span>服务正常 · 无需鉴权</div><h1>抖音视频与图集解析 API</h1><p class="lead">一个接口自动识别普通视频和图文作品。响应中的 <code class="inline-code">type</code> 是业务分流依据：视频返回 <code class="inline-code">video</code>，图集返回 <code class="inline-code">gallery</code>。</p></section>
+<section id="overview"><div class="eyebrow"><span class="status-dot"></span>服务正常 · 无需鉴权</div><h1>抖音视频、图集与实况解析 API</h1><p class="lead">一个接口自动识别普通视频、图文作品和 Live Photo 实况照片。响应中的 <code class="inline-code">type</code> 是业务分流依据；实况作品保持 <code class="inline-code">gallery</code>，并通过 <code class="inline-code">mediaType: live_photo</code> 识别。</p></section>
 <section id="endpoint"><h2>调用地址</h2><div class="endpoint"><span class="method">GET</span><code id="endpointUrl"><span data-api-url data-query="?url={抖音链接}"></span></code><button class="copy-btn" data-copy-target="endpointUrl"><i class="fa-regular fa-copy"></i>复制</button></div><div class="note"><i class="fa-solid fa-circle-info"></i> 参数值必须进行 URL 编码。可传短链接、作品页链接，或完整分享文字中的抖音链接。</div></section>
 <section id="params"><h2>请求参数</h2><p class="section-intro">请求方法为 GET，响应编码为 UTF-8，Content-Type 为 application/json。</p><div class="table-wrap"><table><thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td><code>url</code></td><td>string</td><td class="required">是</td><td>抖音分享短链、视频链接或图文链接。调用方应先提取分享文字中的 URL。</td><td><code>https://v.douyin.com/xxx/</code></td></tr></tbody></table></div></section>
 <section id="debugger"><h2>在线调试</h2><p class="section-intro">输入真实链接直接请求当前 API，结果会在下方显示。</p><div class="try-box"><label class="field-label" for="tryUrl">抖音链接</label><div class="try-row"><input id="tryUrl" value="https://v.douyin.com/xBGobTTRJ9o/" autocomplete="off"><button class="try-btn" id="tryBtn"><i class="fa-solid fa-play"></i><span>发送请求</span></button></div><div class="try-result" id="tryResult"><div class="code-wrap"><div class="code-head"><span class="http-status" id="tryStatus">等待请求</span><button class="copy-btn" data-copy-target="tryOutput"><i class="fa-regular fa-copy"></i>复制 JSON</button></div><pre id="tryOutput"></pre></div></div></div></section>
-<section id="responses"><h2>响应格式</h2><div class="response-map"><article class="response-card"><span class="tag tag-video">type: video</span><h3>视频响应</h3><p>使用 <code>url</code> 播放或下载视频，<code>images</code> 固定为空数组。</p></article><article class="response-card"><span class="tag tag-gallery">type: gallery</span><h3>图集响应</h3><p>遍历 <code>images</code> 获取全部图片，<code>url</code> 固定为空字符串。</p></article></div><h3>成功响应示例</h3><div class="type-tabs"><button class="tab active" data-tab="video">视频 JSON</button><button class="tab" data-tab="gallery">图集 JSON</button></div>
+<section id="responses"><h2>响应格式</h2><div class="response-map"><article class="response-card"><span class="tag tag-video">type: video</span><h3>视频响应</h3><p>使用 <code>url</code> 播放或下载视频，<code>images</code> 固定为空数组。</p></article><article class="response-card"><span class="tag tag-gallery">type: gallery</span><h3>图集与实况响应</h3><p>遍历 <code>images</code>；<code>mediaType=image</code> 为静态图，<code>live_photo</code> 时读取每项的 <code>videoUrl</code>。</p></article></div><h3>成功响应示例</h3><div class="type-tabs"><button class="tab active" data-tab="video">视频 JSON</button><button class="tab" data-tab="gallery">图集 JSON</button><button class="tab" data-tab="live">实况 JSON</button></div>
 <div class="example active" data-example="video"><div class="code-wrap"><div class="code-head"><span>200 · video</span><button class="copy-btn" data-copy-target="videoJson"><i class="fa-regular fa-copy"></i>复制</button></div><pre id="videoJson">{
   "code": 200,
   "type": "video",
@@ -36,6 +36,7 @@
 <div class="example" data-example="gallery"><div class="code-wrap"><div class="code-head"><span>200 · gallery</span><button class="copy-btn" data-copy-target="galleryJson"><i class="fa-regular fa-copy"></i>复制</button></div><pre id="galleryJson">{
   "code": 200,
   "type": "gallery",
+  "mediaType": "image",
   "videoId": "7662259898261030499",
   "title": "#周末去哪儿 #昆明旅游",
   "author": "作者昵称",
@@ -49,7 +50,33 @@
     }
   ],
   "imageCount": 1,
+  "livePhotoCount": 0,
   "sourceUrl": "https://www.iesdouyin.com/share/note/766.../",
+  "cached": false
+}</pre></div></div>
+<div class="example" data-example="live"><div class="code-wrap"><div class="code-head"><span>200 · gallery / live_photo</span><button class="copy-btn" data-copy-target="liveJson"><i class="fa-regular fa-copy"></i>复制</button></div><pre id="liveJson">{
+  "code": 200,
+  "type": "gallery",
+  "mediaType": "live_photo",
+  "videoId": "7519121325147933952",
+  "title": "实况照片作品",
+  "author": "作者昵称",
+  "url": "",
+  "cover": "https://p3-sign.douyinpic.com/image-1.webp",
+  "images": [
+    {
+      "url": "https://p3-sign.douyinpic.com/image-1.webp",
+      "width": 1080,
+      "height": 1440,
+      "videoUrl": "https://video-cdn.example.com/live-1.mp4",
+      "duration": 2485,
+      "videoWidth": 720,
+      "videoHeight": 960
+    }
+  ],
+  "imageCount": 1,
+  "livePhotoCount": 1,
+  "sourceUrl": "https://www.iesdouyin.com/share/note/751.../",
   "cached": false
 }</pre></div></div></section>
 <section id="fields"><h2>字段说明</h2><div class="table-wrap"><table><thead><tr><th>字段</th><th>类型</th><th>适用类型</th><th>说明</th></tr></thead><tbody>
@@ -64,6 +91,12 @@
 <tr><td><code>images[].url</code></td><td>string</td><td>图集</td><td>原始图片地址。地址包含有效期，建议按需使用，不要永久存储。</td></tr>
 <tr><td><code>images[].width</code></td><td>integer</td><td>图集</td><td>图片原始宽度，单位像素。</td></tr>
 <tr><td><code>images[].height</code></td><td>integer</td><td>图集</td><td>图片原始高度，单位像素。</td></tr>
+<tr><td><code>mediaType</code></td><td>string</td><td>图集</td><td><code>image</code> 为静态图集，<code>live_photo</code> 为包含实况视频的图集。</td></tr>
+<tr><td><code>images[].videoUrl</code></td><td>string</td><td>实况图集</td><td>该图片对应的有声 MP4 地址；普通静态图片不返回此字段。</td></tr>
+<tr><td><code>images[].duration</code></td><td>integer</td><td>实况图集</td><td>实况视频时长，单位毫秒。</td></tr>
+<tr><td><code>images[].videoWidth</code></td><td>integer</td><td>实况图集</td><td>实况 MP4 画面宽度，单位像素。</td></tr>
+<tr><td><code>images[].videoHeight</code></td><td>integer</td><td>实况图集</td><td>实况 MP4 画面高度，单位像素。</td></tr>
+<tr><td><code>livePhotoCount</code></td><td>integer</td><td>图集</td><td>图集中已解析到的实况 MP4 数量。</td></tr>
 <tr><td><code>imageCount</code></td><td>integer</td><td>视频/图集</td><td>图片数量。视频固定为 0。</td></tr>
 <tr><td><code>sourceUrl</code></td><td>string</td><td>视频/图集/错误</td><td>短链接重定向后的抖音作品页，用于追踪来源。</td></tr>
 <tr><td><code>cached</code></td><td>boolean</td><td>视频/图集</td><td>是否命中服务端缓存。图集当前固定为 false。</td></tr>
@@ -86,7 +119,10 @@ if (data.code !== 200) throw new Error(data.error);
 if (data.type === 'video') {
   console.log(data.url);
 } else if (data.type === 'gallery') {
-  data.images.forEach(image => console.log(image.url));
+  data.images.forEach(image => {
+    console.log('静态图', image.url);
+    if (image.videoUrl) console.log('实况 MP4', image.videoUrl);
+  });
 }</pre></div><h3>Python</h3><div class="code-wrap"><div class="code-head"><span>Requests</span><button class="copy-btn" data-copy-target="pyCode"><i class="fa-regular fa-copy"></i>复制</button></div><pre id="pyCode">import requests
 
 response = requests.get(
@@ -99,12 +135,15 @@ data = response.json()
 if data['code'] != 200:
     raise RuntimeError(data['error'])
 
-media_urls = (
-    [data['url']] if data['type'] == 'video'
-    else [image['url'] for image in data['images']]
-)</pre></div></section>
-<section id="notes"><h2>接入须知</h2><div class="callout"><strong>推荐判断顺序：</strong>先判断 <code>code === 200</code>，再按 <code>type</code> 分流，最后读取 <code>url</code> 或 <code>images</code>。媒体 CDN 地址可能过期，不建议长期持久化。解析耗时受抖音上游网络影响，客户端超时建议设置为 45 秒。</div></section>
-<div class="footer">API 文档基于当前线上响应格式编写 · 最后更新：2026-07-14</div>
+if data['type'] == 'video':
+    media_urls = [data['url']]
+else:
+    media_urls = [
+        image.get('videoUrl') or image['url']
+        for image in data['images']
+    ]</pre></div></section>
+<section id="notes"><h2>接入须知</h2><div class="callout"><strong>推荐判断顺序：</strong>先判断 <code>code === 200</code>，再按 <code>type</code> 分流；当 <code>type === gallery</code> 时继续判断 <code>mediaType</code>。实况作品中每张图的 <code>videoUrl</code> 是独立有声 MP4，不是 GIF，也不要使用顶层配乐代替。媒体 CDN 地址可能过期，不建议长期持久化。解析耗时受抖音上游网络影响，客户端超时建议设置为 60 秒。</div></section>
+<div class="footer">API 文档基于当前线上响应格式编写 · 最后更新：2026-07-17</div>
 </main></div><div class="toast" id="toast" role="status" aria-live="polite">已复制</div>
 <script>
 const apiBase=location.origin+'/api/parse';document.querySelectorAll('[data-api-url]').forEach(el=>{el.textContent=apiBase+(el.dataset.query||'')});
