@@ -230,11 +230,14 @@ def fetch_live_photos_browser(aweme_id):
         return []
     script = os.path.join(os.path.dirname(__file__), 'extract_live_photos.py')
     try:
+        browser_path = os.environ.get(
+            'PLAYWRIGHT_BROWSERS_PATH',
+            os.path.join(os.path.dirname(__file__), '.playwright-browsers'),
+        )
         completed = subprocess.run(
             [sys.executable, script, aweme_id],
             capture_output=True, text=True, timeout=55, check=True,
-            env={**os.environ, 'PLAYWRIGHT_BROWSERS_PATH':
-                 os.environ.get('PLAYWRIGHT_BROWSERS_PATH', '/home/ubuntu/.cache/ms-playwright')},
+            env={**os.environ, 'PLAYWRIGHT_BROWSERS_PATH': browser_path},
         )
         data = json.loads(completed.stdout)
         return data if isinstance(data, list) else []

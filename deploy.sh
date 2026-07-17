@@ -199,6 +199,13 @@ chown -R "$RUN_USER:$RUN_GROUP" "$WORK_DIR"
 log "以 $RUN_USER 用户创建虚拟环境并安装依赖"
 runuser -u "$RUN_USER" -- python3 -m venv "$WORK_DIR/source/venv"
 runuser -u "$RUN_USER" -- "$WORK_DIR/source/venv/bin/pip" install --disable-pip-version-check --no-cache-dir -r "$WORK_DIR/source/requirements.txt"
+log "安装实况解析所需的 Chromium 浏览器及系统依赖"
+"$WORK_DIR/source/venv/bin/python" -m playwright install-deps chromium
+runuser -u "$RUN_USER" -- env PLAYWRIGHT_BROWSERS_PATH="$WORK_DIR/source/.playwright-browsers" \
+    "$WORK_DIR/source/venv/bin/python" -m playwright install chromium
+runuser -u "$RUN_USER" -- env PLAYWRIGHT_BROWSERS_PATH="$WORK_DIR/source/.playwright-browsers" \
+    "$WORK_DIR/source/venv/bin/python" -c \
+    "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); b=p.chromium.launch(headless=True); b.close(); p.stop()"
 runuser -u "$RUN_USER" -- "$WORK_DIR/source/venv/bin/python" -m py_compile "$WORK_DIR/source/app.py"
 
 if [ -n "$LEGACY_SERVICE" ]; then
@@ -237,6 +244,7 @@ WorkingDirectory=$INSTALL_DIR
 Environment=PYTHONUNBUFFERED=1
 Environment=HOST=127.0.0.1
 Environment=PORT=$PORT
+Environment=PLAYWRIGHT_BROWSERS_PATH=$INSTALL_DIR/.playwright-browsers
 ExecStart=$INSTALL_DIR/venv/bin/python -m gunicorn --workers 2 --bind 127.0.0.1:$PORT --access-logfile - app:app
 Restart=always
 RestartSec=3
