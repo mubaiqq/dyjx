@@ -38,7 +38,7 @@
 适用于 Ubuntu / Debian。脚本会自动安装必要依赖、拉取最新源码、创建 Python 虚拟环境、注册 systemd 服务、启用开机自启，并在启动后执行健康检查。以下命令使用 `main` 分支的最新版本；你也可以先下载并审阅 `deploy.sh` 后再执行。
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/mubaiqq/dyjx/main/deploy-v1.1.1.sh?$(date +%s)" | sudo bash
+curl -4 -fL --connect-timeout 10 --max-time 120 --retry 3 --retry-all-errors -o /tmp/deploy-v1.1.1.sh "https://ghfast.top/https://raw.githubusercontent.com/mubaiqq/dyjx/main/deploy-v1.1.1.sh?$(date +%s)" && sudo bash /tmp/deploy-v1.1.1.sh
 ```
 
 > 同一条命令可重复执行。首次运行会安装到 `/opt/dyjx`；再次运行会自动拉取 GitHub 最新版本并覆盖更新。更新失败或健康检查不通过时，会自动恢复旧版本。项目不保存业务数据，因此更新无需迁移数据。
