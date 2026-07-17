@@ -168,7 +168,31 @@ if [ "$UNIT_EXISTED" -eq 1 ]; then
 fi
 
 log "下载 GitHub 最新代码（$BRANCH）"
-git clone --depth 1 --branch "$BRANCH" -- "$REPO_URL" "$WORK_DIR/source"
+clone_source() {
+    local target="$1" candidate attempt
+    local candidates=("$REPO_URL")
+
+    # 国内网络访问 GitHub 偶尔会出现 GnuTLS -110；默认仓库自动切换加速源。
+    if [ "$REPO_URL" = "https://github.com/mubaiqq/dyjx.git" ]; then
+        candidates+=(
+            "https://ghfast.top/https://github.com/mubaiqq/dyjx.git"
+            "https://ghproxy.net/https://github.com/mubaiqq/dyjx.git"
+        )
+    fi
+
+    for candidate in "${candidates[@]}"; do
+        for attempt in 1 2 3; do
+            rm -rf -- "$target"
+            log "尝试下载（$attempt/3）：$candidate"
+            if git -c http.version=HTTP/1.1 clone --depth 1 --branch "$BRANCH" -- "$candidate" "$target"; then
+                return 0
+            fi
+            sleep "$attempt"
+        done
+    done
+    return 1
+}
+clone_source "$WORK_DIR/source" || fail "GitHub 源码下载失败，请检查服务器到 GitHub 的网络连接后重试"
 rm -rf -- "$WORK_DIR/source/.git"
 chown -R "$RUN_USER:$RUN_GROUP" "$WORK_DIR"
 
